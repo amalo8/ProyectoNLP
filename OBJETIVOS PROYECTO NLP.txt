@@ -1,0 +1,41 @@
+OBJETIVOS PROYECTO NLP
+
+OBJETIVOS GENERALES
+
+0. Preprocesado
+
+- mirar idiomas de reseñas, emojis, usar un modelo para cada reseña o traducir, según la cantidad de reseñas de cada idioma
+
+1. Análisis de sentimientos
+
+- ver si el comentario de cada columna positivo o negativo, realmente es positivo o negativo, grado de coherencia/fiabilidad del comentario con la nota general que le da la persona a su estancia.
+- buscar para los apartados de los que hay nota del hotel, los comentarios que hacen referencia a ese apartado, y hacer un análisis de sentimientos de ahí 
+- si estan los detalles de la habitación, ver la comparativa de la reseña con la calidad de la habitacion
+- comparar las notas que les dan los extranjeros 
+
+2. Modelado de Temas (Topic Modeling) 
+Esto es fundamental en NLP. No solo queremos saber si están felices o enfadados, sino de qué hablan.
+
+Extracción de Tópicos Ocultos: Usar algoritmos (como LDA o BERTopic) para que la Inteligencia Artificial lea las 60.000 reseñas y os diga automáticamente cuáles son los 5 o 6 temas principales de los que habla la gente (Ej: Tema 1: Desayuno/Comida, Tema 2: Ruido/Ubicación, Tema 3: Trato del personal).
+
+Nubes de Palabras (Wordclouds) Contextuales: Crear visualizaciones de las palabras más repetidas en las reseñas de "10" frente a las palabras más repetidas en las reseñas de "1 a 3".
+
+
+3. FASE 3: Modelado Predictivo (Machine Learning) 
+Si llegáis aquí, el 10 está asegurado.
+
+Predicción de la Nota (Rating Prediction): Entrenar un modelo de clasificación (ej. Random Forest, SVM o redes neuronales) para que, dándole solo el texto de una reseña nueva, sea capaz de predecir qué nota numérica (del 1 al 10) le puso ese usuario al hotel.
+
+Detector de "Reseñas Falsas" (Outlier Detection): Encontrar reseñas donde la nota es un 10, pero el sentimiento del texto es muy negativo (o viceversa). Esto ayuda a detectar errores o usuarios "troll".
+
+
+
+------------------------------------------------------------------------------------------------------
+
+FASE 4: Insights de Negocio (Business Intelligence)
+A los profesores les encanta que los datos sirvan para tomar decisiones reales.
+
+Ranking de Puntos Críticos: Identificar cuáles son las quejas que más hunden la nota media de un hotel (¿Es peor tener el baño sucio o que el personal sea antipático?).
+
+Perfilado de Hoteles: Usar el NLP para definir la "personalidad" de cada hotel según sus reseñas (ej. "El hotel ideal para viajes de negocios silenciosos" vs "El mejor ambiente joven").
+
