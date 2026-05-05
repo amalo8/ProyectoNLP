@@ -6,9 +6,9 @@ OBJETIVOS GENERALES
 
 - mirar idiomas de reseñas, emojis, usar un modelo para cada reseña o traducir, según la cantidad de reseñas de cada idioma
 
-1. Análisis de sentimientos
+1. Análisis de sentimientos: USAR UN MODELO PREENTRENADO: CENTRARNOS EN POSITIVO/NEGATIVO/NEUTRO PARA ANALIZARLO UTILIZAR LAS NOTAS HACIENDO INTERVALOS PARA DEFINIR POSITIVO, NEGATIVO NEUTRO
 
-- ver si el comentario de cada columna positivo o negativo, realmente es positivo o negativo, grado de coherencia/fiabilidad del comentario con la nota general que le da la persona a su estancia.
+- ver si el comentario de cada columna positivo o negativo O NEUTRO, realmente es positivo o negativo, grado de coherencia/fiabilidad del comentario con la nota general que le da la persona a su estancia.
 - buscar para los apartados de los que hay nota del hotel, los comentarios que hacen referencia a ese apartado, y hacer un análisis de sentimientos de ahí 
 - si estan los detalles de la habitación, ver la comparativa de la reseña con la calidad de la habitacion
 - comparar las notas que les dan los extranjeros 
