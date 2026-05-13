@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Instrucciones: agente con LangChain, Streamlit y OpenRouter</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.6;
+      color: #1f2933;
+      background: #f7f9fb;
+    }
+
+    main {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+      background: #ffffff;
+    }
+
+    h1, h2 {
+      line-height: 1.25;
+      color: #102a43;
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 2rem;
+    }
+
+    h2 {
+      margin-top: 2rem;
+      border-top: 1px solid #d9e2ec;
+      padding-top: 1.2rem;
+      font-size: 1.3rem;
+    }
+
+    code {
+      font-family: Consolas, Monaco, "Courier New", monospace;
+      background: #eef2f7;
+      padding: 0.1rem 0.3rem;
+      border-radius: 4px;
+    }
+
+    pre {
+      overflow-x: auto;
+      background: #102a43;
+      color: #f0f4f8;
+      padding: 1rem;
+      border-radius: 8px;
+    }
+
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+
+    .intro {
+      font-size: 1.05rem;
+      color: #486581;
+    }
+
+    .warning {
+      border-left: 4px solid #f0b429;
+      background: #fffbea;
+      padding: 0.8rem 1rem;
+      margin: 1rem 0;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Instrucciones de uso: agente con LangChain, Streamlit y OpenRouter</h1>
+
+    <p class="intro">
+      Esta practica muestra como crear un agente sencillo con LangChain que puede
+      actualizar un fichero local usando criterios escritos en lenguaje natural.
+      La interfaz grafica esta hecha con Streamlit y la clave de API se obtiene
+      desde OpenRouter. El modelo por defecto es <code>openrouter/free</code>.
+    </p>
+
+    <h2>1. Que hace esta aplicacion</h2>
+    <p>La aplicacion permite:</p>
+    <ul>
+      <li>Ver el contenido de un fichero local llamado <code>data/notas.txt</code>.</li>
+      <li>Escribir una instruccion en lenguaje natural.</li>
+      <li>Pedir a un agente de LangChain que actualice ese fichero.</li>
+      <li>Comprobar el resultado desde la propia interfaz.</li>
+    </ul>
+
+    <p>Ejemplo de instruccion:</p>
+    <pre><code>Actualiza data/notas.txt anadiendo al final una nota personal: "Revisar los apuntes de matematicas antes del viernes".</code></pre>
+
+    <h2>2. Requisitos previos</h2>
+    <p>Necesitas tener instalado:</p>
+    <ul>
+      <li>Conda, por ejemplo mediante Anaconda o Miniconda.</li>
+      <li>Una clave de API de OpenRouter.</li>
+      <li>Acceso a una terminal de Windows PowerShell.</li>
+    </ul>
+    <p>Puedes crear una clave en:</p>
+    <pre><code>https://openrouter.ai/keys</code></pre>
+
+    <h2>3. Crear el entorno con Conda</h2>
+    <p>Abre PowerShell en la carpeta del proyecto y ejecuta:</p>
+    <pre><code>conda create -n agente-langchain python=3.11 -y</code></pre>
+    <p>Activa el entorno:</p>
+    <pre><code>conda activate agente-langchain</code></pre>
+
+    <h2>4. Instalar dependencias</h2>
+    <p>Con el entorno de Conda activado, instala las librerias:</p>
+    <pre><code>pip install -r requirements.txt</code></pre>
+    <p>Las dependencias principales son:</p>
+    <ul>
+      <li><code>streamlit</code>: crea la interfaz grafica.</li>
+      <li><code>langchain-classic</code>: proporciona el agente clasico.</li>
+      <li><code>langchain-core</code>: proporciona prompts y herramientas.</li>
+      <li><code>langchain-openai</code>: se usa como cliente compatible con el formato de chat de OpenRouter.</li>
+      <li><code>python-dotenv</code>: carga variables desde <code>.env</code>.</li>
+    </ul>
+
+    <h2>5. Configurar la clave de OpenRouter</h2>
+    <p>Copia el fichero de ejemplo:</p>
+    <pre><code>Copy-Item .env.example .env</code></pre>
+    <p>Abre el fichero <code>.env</code> y sustituye el texto por tu clave real:</p>
+    <pre><code>OPENROUTER_API_KEY=tu_clave_real_de_openrouter</code></pre>
+    <div class="warning">No compartas este fichero ni lo subas a GitHub.</div>
+
+    <h2>6. Ejecutar la aplicacion</h2>
+    <p>Ejecuta:</p>
+    <pre><code>streamlit run app.py</code></pre>
+    <p>Streamlit abrira una pagina web local. Normalmente sera:</p>
+    <pre><code>http://localhost:8501</code></pre>
+
+    <h2>7. Como usar la interfaz</h2>
+    <p>La interfaz se ha reducido a una ventana de chatbot:</p>
+    <ul>
+      <li>Escribe una instruccion en la caja inferior del chat.</li>
+      <li>El agente respondera en la conversacion.</li>
+      <li>Si la instruccion requiere cambiar el fichero, el agente llamara a la herramienta <code>actualizar_fichero</code>.</li>
+      <li>Para comprobar el resultado, abre manualmente <code>data/notas.txt</code> en Windows.</li>
+    </ul>
+    <p>Ejemplo:</p>
+    <pre><code>Anade al final de data/notas.txt una nota para estudiar Python.</code></pre>
+    <p>
+      El modelo por defecto se configura en el codigo con <code>openrouter/free</code>
+      y la temperatura con <code>0.0</code>, para mantener la interfaz lo mas
+      simple posible.
+    </p>
+
+    <h2>8. Por que usamos ChatOpenAI con OpenRouter</h2>
+    <p>
+      OpenRouter permite usar distintos modelos desde una sola API. En este
+      proyecto usamos <code>ChatOpenAI</code> como cliente compatible con el
+      formato de chat, pero la clave y el endpoint son de OpenRouter.
+    </p>
+    <p>En el codigo se configura:</p>
+    <pre><code>base_url="https://openrouter.ai/api/v1"
+api_key=os.getenv("OPENROUTER_API_KEY")</code></pre>
+    <p>El modelo por defecto es:</p>
+    <pre><code>openrouter/free</code></pre>
+    <p>
+      Ese valor pide a OpenRouter que seleccione automaticamente un modelo
+      gratuito disponible. Tambien puedes elegir modelos concretos que tengan
+      variante gratuita usando identificadores terminados en <code>:free</code>.
+    </p>
+
+    <h2>9. Como funciona el agente</h2>
+    <p>El flujo general es:</p>
+    <pre><code>Usuario -> Streamlit -> Agente LangChain -> Herramienta Python -> Fichero local</code></pre>
+    <p>Tambien tienes una imagen con el diagrama completo en:</p>
+    <pre><code>assets/flujo_trabajo_agente.svg</code></pre>
+    <p>Y otro diagrama que relaciona cada parte conceptual del agente con las clases y funciones del codigo:</p>
+    <pre><code>assets/arquitectura_agente_ia.svg</code></pre>
+    <p>El agente no modifica el fichero directamente. Para hacerlo debe usar una herramienta llamada:</p>
+    <pre><code>actualizar_fichero</code></pre>
+    <p>Esta herramienta puede:</p>
+    <ul>
+      <li>Reemplazar todo el contenido.</li>
+      <li>Anadir texto al final.</li>
+      <li>Anadir texto al principio.</li>
+    </ul>
+
+    <h2>10. Seguridad del ejemplo</h2>
+    <p>El agente solo puede modificar ficheros dentro de la carpeta:</p>
+    <pre><code>data/</code></pre>
+    <p>Esto evita que pueda cambiar otros archivos del ordenador por error.</p>
+
+    <h2>11. Problemas frecuentes</h2>
+    <p>Si aparece un error relacionado con <code>OPENROUTER_API_KEY</code>, revisa que:</p>
+    <ul>
+      <li>Existe el fichero <code>.env</code>.</li>
+      <li>La variable se llama exactamente <code>OPENROUTER_API_KEY</code>.</li>
+      <li>La clave de OpenRouter es correcta.</li>
+    </ul>
+    <p>Si Streamlit no arranca, revisa que:</p>
+    <ul>
+      <li>El entorno de Conda esta activado.</li>
+      <li>Has instalado <code>requirements.txt</code>.</li>
+      <li>Estas ejecutando el comando desde la carpeta del proyecto.</li>
+    </ul>
+  </main>
+</body>
+</html>
