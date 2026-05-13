@@ -48,7 +48,7 @@ from langchain_openai import ChatOpenAI
 
 # ChatPromptTemplate construye el prompt con mensajes separados.
 # MessagesPlaceholder reserva espacio para pasos intermedios del agente.
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder # libreria para confeccionar instrucciones internas del agente
 
 
 # ============================================================
@@ -85,7 +85,7 @@ DATA_DIR = BASE_DIR / "data"
 DEFAULT_FILE = DATA_DIR / "notas.txt"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MODELO_POR_DEFECTO = "openrouter/free"
-TEMPERATURA_POR_DEFECTO = 0.0
+TEMPERATURA_POR_DEFECTO = 0.0 # cuanto + alto + probable es que se invente cualquier cosa
 
 
 # ============================================================
@@ -100,7 +100,7 @@ def main() -> None:
         layout="centered",
     )
 
-    preparar_fichero_demo()
+    preparar_fichero_demo() # funcion para crear el data/notas.txt con la info predefinida
 
     st.title("Agente sencillo con LangChain")
     st.caption("Escribe una instruccion y el agente actualizara data/notas.txt si procede.")
@@ -121,7 +121,11 @@ def main() -> None:
                 temperatura=TEMPERATURA_POR_DEFECTO,
             )
 
-            respuesta = agente.invoke({"input": instruccion}) # invoke es el método que ejecuta el agente. Le pasamos un diccionario con la clave "input" porque en el prompt definimos un mensaje human con "{input}". El agente procesa la instrucción, decide si usar la herramienta actualizar_fichero, y devuelve una respuesta final que se muestra al usuario.
+            respuesta = agente.invoke({"input": instruccion}) 
+            # invoke es el método que ejecuta el agente. 
+            # Le pasamos un diccionario con la clave "input" porque en el prompt definimos un mensaje 
+            # human con "{input}". El agente procesa la instrucción, decide si usar la herramienta actualizar_fichero, 
+            # y devuelve una respuesta final que se muestra al usuario.
 
             st.subheader("Respuesta del agente")
             st.write(respuesta["output"])
