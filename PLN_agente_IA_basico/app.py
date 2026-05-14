@@ -42,18 +42,14 @@ hotel_seleccionado = st.selectbox("📌 Selecciona un Hotel para analizar:", lis
 info_hotel = df_info[df_info['nombre_del_hotel'].str.lower() == hotel_seleccionado.lower()].iloc[0]
 comentarios_hotel = df_comentarios[df_comentarios['nombre_del_hotel'].str.lower() == hotel_seleccionado.lower()]
 
-st.divider()
 
 # ==========================================
-# 4. FUNCIONES BASE (lógica pura, sin @tool)
-#    Úsalas libremente en cualquier parte del código
+# 4. FUNCIONES BASE (lógica pura)
 # ==========================================
 def _consultar_metricas():
-    """Devuelve las métricas del hotel seleccionado como diccionario."""
     return info_hotel.to_dict()
 
 def _analizar_comentarios():
-    """Extrae los tópicos positivos y negativos más frecuentes del hotel."""
     def extraer(col):
         todos = []
         for c in comentarios_hotel[col].dropna():
@@ -65,13 +61,28 @@ def _analizar_comentarios():
         "debilidades": extraer('tema_negativo')
     }
 
+def _obtener_evidencia_real(categoria, tipo):
+    """Filtra y devuelve ejemplos reales de texto para una categoría específica."""
+    col_tema = 'tema_positivo' if tipo == 'positivo' else 'tema_negativo'
+    col_texto = 'positivo' if tipo == 'positivo' else 'negativo'
+   
+    # Buscamos filas donde el tema contenga la categoría (ej: 'Confort')
+    muestras = comentarios_hotel[comentarios_hotel[col_tema].str.contains(categoria, na=False, case=False)]
+   
+    if muestras.empty:
+        return f"No se han encontrado quejas o alabanzas específicas sobre {categoria}."
+   
+    # Devolvemos los 6 ejemplos más representativos
+    ejemplos = muestras[col_texto].head(6).tolist()
+    return "\n".join([f"- {txt}" for txt in ejemplos])
+
 # ==========================================
 # 5. SISTEMA DE PESTAÑAS
 # ==========================================
 tab1, tab2 = st.tabs(["📊 Análisis de Puntuaciones", "🤖 Consultor IA LangChain"])
 
 # ------------------------------------------
-# PESTAÑA 1: DASHBOARD VISUAL (GRÁFICO DE ARAÑA)
+# PESTAÑA 1: DASHBOARD VISUAL
 # ------------------------------------------
 with tab1:
     col1, col2 = st.columns(2)
@@ -80,10 +91,8 @@ with tab1:
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # --- Lógica del Gráfico de Araña con Benchmarking ---
     categorias_base = ['Personal', 'Confort', 'WiFi', 'Instalaciones', 'Calidad/Precio', 'Limpieza', 'Ubicación']
     columnas_notas = ['nota_personal', 'nota_confort', 'nota_wifi', 'nota_instalaciones_servicios', 'nota_calidad_precio', 'nota_limpieza', 'nota_ubicacion']
-
     cat_validas, punt_hotel, med_globales, cat_faltantes = [], [], [], []
 
     for cat, col in zip(categorias_base, columnas_notas):
@@ -101,24 +110,19 @@ with tab1:
     if len(cat_validas) >= 3:
         min_abs = min(min(punt_hotel), min(med_globales))
         inicio_rango = int(min_abs) if min_abs >= 5 else 0
-
         fig = go.Figure()
-        # Capa Fondo: Media Sector
         fig.add_trace(go.Scatterpolar(
             r=med_globales + [med_globales[0]], theta=cat_validas + [cat_validas[0]],
             fill='toself', fillcolor='rgba(255, 65, 54, 0.15)',
             line=dict(color='rgba(255, 65, 54, 0.5)', width=1.5), name='Media del Sector'
         ))
-        # Capa Frente: Hotel
         fig.add_trace(go.Scatterpolar(
             r=punt_hotel + [punt_hotel[0]], theta=cat_validas + [cat_validas[0]],
             fill='toself', fillcolor='rgba(31, 119, 180, 0.5)',
             line=dict(color='#1f77b4', width=3), marker=dict(size=8), name=hotel_seleccionado
         ))
-        fig.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[inicio_rango, 10], dtick=0.5)),
-            showlegend=True, margin=dict(l=80, r=80, t=20, b=20)
-        )
+        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[inicio_rango, 10], dtick=0.5)),
+                          showlegend=True, margin=dict(l=80, r=80, t=20, b=20))
         st.plotly_chart(fig, use_container_width=True)
 
 # ------------------------------------------
@@ -128,7 +132,6 @@ with tab2:
     st.subheader(f"🤖 Consultor Estratégico IA: {hotel_seleccionado}")
 
     # --- HERRAMIENTAS (TOOLS) ---
-    # Envuelven las funciones base para que el agente pueda invocarlas
     @tool
     def consultar_metricas_seleccionado():
         """Consulta las notas numéricas actuales del hotel seleccionado."""
@@ -139,7 +142,16 @@ with tab2:
         """Analiza los tópicos positivos y negativos más frecuentes del hotel."""
         return _analizar_comentarios()
 
-    # --- Pre-visualización de tópicos (llamada directa a la función base) ---
+    @tool
+    def profundizar_en_comentarios_reales(categoria: str, tipo: str):
+        """
+        Lee ejemplos reales de reseñas para entender el porqué de una nota.
+        'categoria' debe ser el tema (ej: 'Confort', 'Limpieza').
+        'tipo' debe ser 'positivo' o 'negativo'.
+        """
+        return _obtener_evidencia_real(categoria, tipo)
+
+    # Pre-visualización
     top_data = _analizar_comentarios()
     col_a, col_b = st.columns(2)
     with col_a:
@@ -148,34 +160,54 @@ with tab2:
         st.error(f"❌ **Debilidades:** {', '.join(top_data['debilidades'])}")
 
     if st.button("🚀 Ejecutar Consultoría"):
-        with st.spinner('El Agente LangChain está razonando...'):
+        with st.spinner('🕵️ Investigando a fondo las reseñas...'):
             clave = os.getenv("OPENROUTER_API_KEY")
-
-            # LISTA DE MODELOS DE RESPALDO (Evita 404 y 429)
+           
+            # Priorizamos modelos potentes para que sigan mejor las instrucciones complejas
             modelos_prueba = [
                 "nvidia/nemotron-3-super-120b-a12b:free",
-                "meta-llama/llama-3.2-3b-instruct:free",
                 "meta-llama/llama-3-8b-instruct:free",
-                "mistralai/mistral-7b-instruct:free"
+                "google/gemma-2-9b-it:free"
             ]
-
+           
             exito = False
             for m in modelos_prueba:
                 try:
-                    llm = ChatOpenAI(
-                        model=m, api_key=clave,
-                        base_url="https://openrouter.ai/api/v1", temperature=0.3
-                    )
-                    tools = [consultar_metricas_seleccionado, analizar_comentarios_nlp]
+                    llm = ChatOpenAI(model=m, api_key=clave, base_url="https://openrouter.ai/api/v1", temperature=0.1)
+                    tools = [consultar_metricas_seleccionado, analizar_comentarios_nlp, profundizar_en_comentarios_reales]
+                   
+                    # --- EL PROMPT DE HIERRO ---
                     prompt = ChatPromptTemplate.from_messages([
-                        ("system", f"Eres un Consultor Senior. Analiza el hotel {hotel_seleccionado}."),
+                        ("system", f"""Eres un Auditor de Calidad de Hoteles. Tu informe sobre el {hotel_seleccionado} será leído por la directiva y DEBE ser técnico y basado en pruebas.
+                       
+                        PROCESO OBLIGATORIO (Paso a paso):
+                        1. Llama a 'consultar_metricas_seleccionado' para ver las notas.
+                        2. Llama a 'analizar_comentarios_nlp' para identificar los 3 problemas principales.
+                        3. Para CADA uno de esos 3 problemas, DEBES LLAMAR OBLIGATORIAMENTE a 'profundizar_en_comentarios_reales' (tipo='negativo').
+                        4. Si no usas la herramienta de profundizar, tu informe será rechazado.
+                       
+                        ESTRUCTURA DEL INFORME FINAL:
+                        - Diagnóstico Numérico: Breve resumen de las notas.
+                         IMPORTANTÍSIMO, OBLIGATORIO:
+                        - Análisis de Evidencias: Por cada problema detectado, cita TEXTUALMENTE entre comillas al menos una frase real de los clientes que has leído.
+                        - Plan de Acción: Soluciones concretas a esos testimonios.
+                       
+                        PROHIBIDO: Usar frases genéricas como 'mejorar el servicio' o 'el personal es amable'. Di qué pasa exactamente."""),
                         ("human", "{input}"),
                         MessagesPlaceholder(variable_name="agent_scratchpad"),
                     ])
+                   
                     agent = create_tool_calling_agent(llm, tools, prompt)
                     executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
 
-                    respuesta = executor.invoke({"input": f"Dime los 2 puntos de mejora más urgentes para {hotel_seleccionado}."})
+                    # --- CAMBIO EN LA CONSULTA: Pedimos evidencia explícitamente ---
+                    consulta = (
+                        f"Realiza una auditoría completa del {hotel_seleccionado}. "
+                        "Identifica los fallos críticos y utiliza la herramienta de profundizar para "
+                        "extraer testimonios reales. Tu respuesta DEBE incluir citas directas de clientes."
+                    )
+
+                    respuesta = executor.invoke({"input": consulta})
 
                     st.markdown("---")
                     st.markdown(respuesta["output"])
@@ -183,8 +215,8 @@ with tab2:
                     exito = True
                     break
                 except Exception as e:
-                    st.warning(f"Fallo con {m}. Reintentando con el siguiente...")
+                    st.warning(f"Fallo con {m}. Reintentando...")
                     continue
 
             if not exito:
-                st.error("Servidores de OpenRouter saturados. Reintenta en 30 segundos.")
+                st.error("Servidores saturados. Reintenta en unos segundos.")
