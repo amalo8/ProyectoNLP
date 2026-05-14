@@ -26,7 +26,6 @@ st.markdown("Analizador inteligente de sentimiento y tópicos con arquitectura L
 # ==========================================
 @st.cache_data
 def cargar_datos():
-    # Asegúrate de que las rutas sean las correctas
     df_info = pd.read_csv('datos/procesados/df_hoteles_vlc_info.csv')
     df_comentarios = pd.read_csv('datos/procesados/df_comentarios_final_topics.csv')
     return df_info, df_comentarios
@@ -46,7 +45,28 @@ comentarios_hotel = df_comentarios[df_comentarios['nombre_del_hotel'].str.lower(
 st.divider()
 
 # ==========================================
-# 4. SISTEMA DE PESTAÑAS
+# 4. FUNCIONES BASE (lógica pura, sin @tool)
+#    Úsalas libremente en cualquier parte del código
+# ==========================================
+def _consultar_metricas():
+    """Devuelve las métricas del hotel seleccionado como diccionario."""
+    return info_hotel.to_dict()
+
+def _analizar_comentarios():
+    """Extrae los tópicos positivos y negativos más frecuentes del hotel."""
+    def extraer(col):
+        todos = []
+        for c in comentarios_hotel[col].dropna():
+            temas = str(c).split(" - ")
+            todos.extend([t for t in temas if t != "Otro Tema / Mixto / Vacío"])
+        return pd.Series(todos).value_counts().head(3).index.tolist()
+    return {
+        "fortalezas": extraer('tema_positivo'),
+        "debilidades": extraer('tema_negativo')
+    }
+
+# ==========================================
+# 5. SISTEMA DE PESTAÑAS
 # ==========================================
 tab1, tab2 = st.tabs(["📊 Análisis de Puntuaciones", "🤖 Consultor IA LangChain"])
 
@@ -57,15 +77,15 @@ with tab1:
     col1, col2 = st.columns(2)
     col1.metric(label="⭐ Nota Media Booking", value=f"{info_hotel['nota_media_resenas']} / 10")
     col2.metric(label="📝 Volumen de Reseñas Analizadas", value=len(comentarios_hotel))
-    
+
     st.markdown("<br>", unsafe_allow_html=True)
-    
+
     # --- Lógica del Gráfico de Araña con Benchmarking ---
     categorias_base = ['Personal', 'Confort', 'WiFi', 'Instalaciones', 'Calidad/Precio', 'Limpieza', 'Ubicación']
     columnas_notas = ['nota_personal', 'nota_confort', 'nota_wifi', 'nota_instalaciones_servicios', 'nota_calidad_precio', 'nota_limpieza', 'nota_ubicacion']
-    
+
     cat_validas, punt_hotel, med_globales, cat_faltantes = [], [], [], []
-    
+
     for cat, col in zip(categorias_base, columnas_notas):
         nota = info_hotel[col]
         if pd.isna(nota):
@@ -74,25 +94,25 @@ with tab1:
             cat_validas.append(cat)
             punt_hotel.append(nota)
             med_globales.append(round(df_info[col].mean(), 1))
-            
+
     if cat_faltantes:
         st.warning(f"⚠️ Categorías sin datos: **{', '.join(cat_faltantes)}**")
-        
+
     if len(cat_validas) >= 3:
         min_abs = min(min(punt_hotel), min(med_globales))
         inicio_rango = int(min_abs) if min_abs >= 5 else 0
-    
+
         fig = go.Figure()
         # Capa Fondo: Media Sector
         fig.add_trace(go.Scatterpolar(
             r=med_globales + [med_globales[0]], theta=cat_validas + [cat_validas[0]],
-            fill='toself', fillcolor='rgba(255, 65, 54, 0.15)', 
+            fill='toself', fillcolor='rgba(255, 65, 54, 0.15)',
             line=dict(color='rgba(255, 65, 54, 0.5)', width=1.5), name='Media del Sector'
         ))
         # Capa Frente: Hotel
         fig.add_trace(go.Scatterpolar(
             r=punt_hotel + [punt_hotel[0]], theta=cat_validas + [cat_validas[0]],
-            fill='toself', fillcolor='rgba(31, 119, 180, 0.5)', 
+            fill='toself', fillcolor='rgba(31, 119, 180, 0.5)',
             line=dict(color='#1f77b4', width=3), marker=dict(size=8), name=hotel_seleccionado
         ))
         fig.update_layout(
@@ -108,24 +128,19 @@ with tab2:
     st.subheader(f"🤖 Consultor Estratégico IA: {hotel_seleccionado}")
 
     # --- HERRAMIENTAS (TOOLS) ---
+    # Envuelven las funciones base para que el agente pueda invocarlas
     @tool
     def consultar_metricas_seleccionado():
         """Consulta las notas numéricas actuales del hotel seleccionado."""
-        return info_hotel.to_dict()
+        return _consultar_metricas()
 
     @tool
     def analizar_comentarios_nlp():
         """Analiza los tópicos positivos y negativos más frecuentes del hotel."""
-        def extraer(col):
-            todos = []
-            for c in comentarios_hotel[col].dropna():
-                temas = str(c).split(" - ")
-                todos.extend([t for t in temas if t != "Otro Tema / Mixto / Vacío"])
-            return pd.Series(todos).value_counts().head(3).index.tolist()
-        return {"fortalezas": extraer('tema_positivo'), "debilidades": extraer('tema_negativo')}
+        return _analizar_comentarios()
 
-    # Pre-visualización de tópicos (para dar contexto al usuario)
-    top_data = analizar_comentarios_nlp()
+    # --- Pre-visualización de tópicos (llamada directa a la función base) ---
+    top_data = _analizar_comentarios()
     col_a, col_b = st.columns(2)
     with col_a:
         st.success(f"✅ **Fortalezas:** {', '.join(top_data['fortalezas'])}")
@@ -135,7 +150,7 @@ with tab2:
     if st.button("🚀 Ejecutar Consultoría"):
         with st.spinner('El Agente LangChain está razonando...'):
             clave = os.getenv("OPENROUTER_API_KEY")
-            
+
             # LISTA DE MODELOS DE RESPALDO (Evita 404 y 429)
             modelos_prueba = [
                 "nvidia/nemotron-3-super-120b-a12b:free",
@@ -159,9 +174,9 @@ with tab2:
                     ])
                     agent = create_tool_calling_agent(llm, tools, prompt)
                     executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
-                    
+
                     respuesta = executor.invoke({"input": f"Dime los 2 puntos de mejora más urgentes para {hotel_seleccionado}."})
-                    
+
                     st.markdown("---")
                     st.markdown(respuesta["output"])
                     st.caption(f"🧠 Cerebro utilizado: {m}")
@@ -170,6 +185,6 @@ with tab2:
                 except Exception as e:
                     st.warning(f"Fallo con {m}. Reintentando con el siguiente...")
                     continue
-            
+
             if not exito:
                 st.error("Servidores de OpenRouter saturados. Reintenta en 30 segundos.")

@@ -1,322 +1,190 @@
-"""
-Aplicacion educativa: agente sencillo con LangChain + Streamlit.
-
-Objetivo:
-- Mostrar como un LLM puede usar una "herramienta" para modificar un fichero local.
-- Mantener el codigo claro para alumnos que empiezan desde cero.
-
-Para ejecutar:
-    streamlit run app.py
-"""
-
-from __future__ import annotations
-
-import os
-from pathlib import Path
-from typing import Literal
-
-
-# ============================================================
-# 1. INTERFAZ GRÁFICA
-# ============================================================
-
-# Streamlit permite crear la interfaz web de la aplicación.
 import streamlit as st
-
-
-# ============================================================
-# 2. CONFIGURACIÓN DEL ENTORNO
-# ============================================================
-
-# load_dotenv carga variables de entorno desde un fichero .env.
-# Por ejemplo: OPENROUTER_API_KEY=...
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import os
 from dotenv import load_dotenv
 
-
-# ============================================================
-# 3. MODELO LLM
-# ============================================================
-
-# ChatOpenAI es el cliente de chat compatible con APIs tipo OpenAI.
-# Aquí se usará con OpenRouter configurando api_key y base_url.
+# --- IMPORTS DE LANGCHAIN ---
 from langchain_openai import ChatOpenAI
-
-
-# ============================================================
-# 4. PROMPT DEL AGENTE
-# ============================================================
-
-# ChatPromptTemplate construye el prompt con mensajes separados.
-# MessagesPlaceholder reserva espacio para pasos intermedios del agente.
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder # libreria para confeccionar instrucciones internas del agente
-
-
-# ============================================================
-# 5. HERRAMIENTAS DEL AGENTE
-# ============================================================
-
-# tool convierte una función Python normal en una herramienta para el agente.
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
+from langchain.agents import AgentExecutor, create_tool_calling_agent
 
-# BaseModel y Field definen y documentan los argumentos de la herramienta.
-from pydantic import BaseModel, Field
-
-
-# ============================================================
-# 6. EJECUCIÓN DEL AGENTE
-# ============================================================
-
-# create_tool_calling_agent crea un agente capaz de llamar herramientas.
-# AgentExecutor ejecuta el ciclo: entrada -> decisión -> tool -> respuesta.
-from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
-
-
-
-
-# Cargamos variables de entorno desde un fichero .env si existe.
-# Por ejemplo: OPENROUTER_API_KEY=sk-or-...
+# Cargar las variables ocultas del archivo .env
 load_dotenv()
 
-
-# Solo permitimos tocar ficheros dentro de esta carpeta.
-# Esto evita que el agente pueda modificar cualquier archivo del ordenador.
-BASE_DIR = Path(__file__).parent.resolve()
-DATA_DIR = BASE_DIR / "data"
-DEFAULT_FILE = DATA_DIR / "notas.txt"
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-MODELO_POR_DEFECTO = "openrouter/free"
-TEMPERATURA_POR_DEFECTO = 0.0 # cuanto + alto + probable es que se invente cualquier cosa
-
-
-# ============================================================
-# 1. INTERFAZ: el usuario escribe una instrucción
-# ============================================================
-
-def main() -> None:
-    """Interfaz de Streamlit para probar el agente."""
-
-    st.set_page_config(
-        page_title="Agente con LangChain",
-        layout="centered",
-    )
-
-    preparar_fichero_demo() # funcion para crear el data/notas.txt con la info predefinida
-
-    st.title("Agente sencillo con LangChain")
-    st.caption("Escribe una instruccion y el agente actualizara data/notas.txt si procede.")
-
-    instruccion = st.text_area(
-        "Instrucción para el agente",
-        placeholder="Ejemplo: Añade al final de data/notas.txt una nota para estudiar Python.",   # En instruccion es donde el usuario escribe lo que quiere que el agente haga. El placeholder es un ejemplo que se muestra cuando el campo está vacío para guiar al usuario.
-    )
-
-    if st.button("Ejecutar agente"):
-        if not instruccion.strip():
-            st.warning("Escribe primero una instrucción.")
-            return
-
-        try:
-            agente = crear_agente(
-                modelo=MODELO_POR_DEFECTO,
-                temperatura=TEMPERATURA_POR_DEFECTO,
-            )
-
-            respuesta = agente.invoke({"input": instruccion}) 
-            # invoke es el método que ejecuta el agente. 
-            # Le pasamos un diccionario con la clave "input" porque en el prompt definimos un mensaje 
-            # human con "{input}". El agente procesa la instrucción, decide si usar la herramienta actualizar_fichero, 
-            # y devuelve una respuesta final que se muestra al usuario.
-
-            st.subheader("Respuesta del agente")
-            st.write(respuesta["output"])
-
-        except Exception as exc:
-            st.error(f"No se pudo ejecutar el agente: {exc}")
-
-    if st.button("Restaurar fichero de ejemplo"):
-        restaurar_fichero_demo()
-        st.success("Fichero restaurado correctamente.")
-
-
-# ============================================================
-# 2. CREACIÓN DEL AGENTE
-# ============================================================
-
-def crear_agente(modelo: str, temperatura: float) -> AgentExecutor:
-    """
-    Construye el agente.
-
-    El agente necesita:
-    1. Un modelo LLM.
-    2. Un prompt con instrucciones.
-    3. Una lista de herramientas.
-    """
-
-    llm = crear_llm(modelo, temperatura)
-    prompt = crear_prompt()
-    herramientas = [actualizar_fichero]
-
-    agente = create_tool_calling_agent(llm, herramientas, prompt)
-
-    return AgentExecutor(  # retorna un objeto de la clase AgenteExecutor que se encarga de ejecutar el ciclo del agente.
-        agent=agente,
-        tools=herramientas,
-        verbose=True,
-        handle_parsing_errors=True,
-    )
-
-
-# ============================================================
-# 3. MODELO LLM
-# ============================================================
-
-def crear_llm(modelo: str, temperatura: float) -> ChatOpenAI:
-    """Configura el modelo de lenguaje que tomará las decisiones."""
-
-    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
-    if not openrouter_api_key:
-        raise ValueError("Falta OPENROUTER_API_KEY en el fichero .env.")
-
-    return ChatOpenAI(
-        model=modelo,
-        temperature=temperatura,
-        api_key=openrouter_api_key,
-        base_url=OPENROUTER_BASE_URL,
-        default_headers={
-            "HTTP-Referer": "http://localhost:8501",
-            "X-Title": "Agente educativo LangChain Streamlit",
-        },
-    )
-
-
-# ============================================================
-# 4. PROMPT: instrucciones que recibe el agente
-# ============================================================
-
-# Define las instrucciones generales del agente
-
-def crear_prompt():
-
-    return ChatPromptTemplate.from_messages([
-
-        # Comportamiento general del agente
-        (
-            "system",
-            "Eres un agente que modifica ficheros dentro de la carpeta data. No permitas crear subcarpetas. "
-            "Usa la herramienta actualizar_fichero para hacer cambios reales."
-        ),
-
-        # Mensaje del usuario
-        ("human", "{input}"),   # aquí el agente recibirá la instrucción del usuario. El "{input}" se reemplazará por el texto que el usuario escriba en la interfaz.
-
-        # Memoria interna del agente
-        MessagesPlaceholder(variable_name="agent_scratchpad"), # este espacio se reserva para que el agente pueda escribir sus pensamientos intermedios, como "Voy a usar la herramienta actualizar_fichero con estos argumentos...". Esto es útil para entender qué decisiones toma el agente durante su proceso de razonamiento.
-
-    ])
-
-
-# ============================================================
-# 5. ESQUEMA DE ENTRADA DE LA HERRAMIENTA
-# ============================================================
-
-class ActualizarFicheroArgs(BaseModel):
-    """
-    Argumentos que el LLM debe generar para usar la herramienta.
-
-    Esto no modifica nada: solo define qué datos son válidos.
-    """
-
-    ruta_relativa: str = Field(
-        description="Ruta del fichero dentro de la carpeta data." # El texto de la descripción es lo que el LLM ve para entender qué debe escribir aquí.
-    )
-
-    accion: Literal["reemplazar", "anadir_al_final", "anadir_al_principio"] = Field(
-        description="Accion que se aplicara al fichero."
-    )
-
-    contenido: str = Field(
-        description="Contenido que se escribira en el fichero."
-    )
-
-
-# ============================================================
-# 6. HERRAMIENTA: acción real que puede ejecutar el agente
-# ============================================================
-
-@tool("actualizar_fichero", args_schema=ActualizarFicheroArgs)
-def actualizar_fichero(ruta_relativa, accion, contenido):
-    """
-    Tool de LangChain.
-
-    El LLM decide usarla, pero Python es quien realmente modifica el fichero.
-    """
-
-    ruta = resolver_ruta_segura(ruta_relativa)
-    ruta.parent.mkdir(parents=True, exist_ok=True)
-
-    texto_actual = ruta.read_text(encoding="utf-8") if ruta.exists() else ""
-
-    if accion == "reemplazar":
-        nuevo_texto = contenido
-    elif accion == "anadir_al_final":
-        nuevo_texto = texto_actual.rstrip() + "\n" + contenido
-    elif accion == "anadir_al_principio":
-        nuevo_texto = contenido.rstrip() + "\n" + texto_actual
-    else:
-        raise ValueError(f"Accion no soportada: {accion}")
-
-    ruta.write_text(nuevo_texto, encoding="utf-8")
-
-    return (
-        f"Fichero actualizado correctamente.\n"
-        f"Ruta: data/{ruta.name}\n"
-        f"Accion aplicada: {accion}\n"
-        f"Caracteres finales: {len(nuevo_texto)}"
-    )
-
-
-# ============================================================
-# 7. FUNCIONES AUXILIARES DEL FICHERO
-# ============================================================
-
-def preparar_fichero_demo() -> None:
-    """Crea la carpeta y el fichero de ejemplo si no existen."""
-
-    DATA_DIR.mkdir(exist_ok=True)
-    if not DEFAULT_FILE.exists():
-        restaurar_fichero_demo()
-
-
-def restaurar_fichero_demo() -> None:
-    """Restaura el fichero de ejemplo a su contenido inicial."""
-
-    DEFAULT_FILE.write_text(
-        "Lista inicial de notas personales:\n"
-        "- Organizar mis apuntes de inteligencia artificial\n"
-        "- Revisar dudas antes de la proxima clase\n",
-        encoding="utf-8",
-    )
-
-
-def resolver_ruta_segura(ruta_relativa: str) -> Path:
-    """Evita que el agente escriba fuera de la carpeta data."""
-
-    ruta_limpia = ruta_relativa.strip().replace("\\", "/")
-
-    if ruta_limpia.startswith("data/"):
-        ruta_limpia = ruta_limpia.removeprefix("data/")
-
-    ruta = (DATA_DIR / ruta_limpia).resolve()
-
-    if DATA_DIR not in ruta.parents and ruta != DATA_DIR:
-        raise ValueError("La ruta indicada esta fuera de la carpeta data.")
-
-    return ruta
-
-
-# ============================================================
-# 8. ARRANQUE DE LA APLICACIÓN
-# ============================================================
-
-if __name__ == "__main__":
-    main()
+# ==========================================
+# 1. CONFIGURACIÓN DE LA PÁGINA
+# ==========================================
+st.set_page_config(page_title="Dashboard Hotelero NLP", page_icon="🏨", layout="wide")
+st.title("🏨 Cuadro de Mandos y Agente IA de Calidad")
+st.markdown("Analizador inteligente de sentimiento y tópicos con arquitectura LangChain.")
+
+# ==========================================
+# 2. CARGA DE DATOS (Con caché)
+# ==========================================
+@st.cache_data
+def cargar_datos():
+    df_info = pd.read_csv('datos/procesados/df_hoteles_vlc_info.csv')
+    df_comentarios = pd.read_csv('datos/procesados/df_comentarios_final_topics.csv')
+    return df_info, df_comentarios
+
+df_info, df_comentarios = cargar_datos()
+
+# ==========================================
+# 3. SELECTOR Y FILTRADO (ROBUSTO)
+# ==========================================
+lista_hoteles = df_info['nombre_del_hotel'].unique()
+hotel_seleccionado = st.selectbox("📌 Selecciona un Hotel para analizar:", lista_hoteles)
+
+# Filtrado ignorando mayúsculas/minúsculas
+info_hotel = df_info[df_info['nombre_del_hotel'].str.lower() == hotel_seleccionado.lower()].iloc[0]
+comentarios_hotel = df_comentarios[df_comentarios['nombre_del_hotel'].str.lower() == hotel_seleccionado.lower()]
+
+st.divider()
+
+# ==========================================
+# 4. FUNCIONES BASE (lógica pura, sin @tool)
+#    Úsalas libremente en cualquier parte del código
+# ==========================================
+def _consultar_metricas():
+    """Devuelve las métricas del hotel seleccionado como diccionario."""
+    return info_hotel.to_dict()
+
+def _analizar_comentarios():
+    """Extrae los tópicos positivos y negativos más frecuentes del hotel."""
+    def extraer(col):
+        todos = []
+        for c in comentarios_hotel[col].dropna():
+            temas = str(c).split(" - ")
+            todos.extend([t for t in temas if t != "Otro Tema / Mixto / Vacío"])
+        return pd.Series(todos).value_counts().head(3).index.tolist()
+    return {
+        "fortalezas": extraer('tema_positivo'),
+        "debilidades": extraer('tema_negativo')
+    }
+
+# ==========================================
+# 5. SISTEMA DE PESTAÑAS
+# ==========================================
+tab1, tab2 = st.tabs(["📊 Análisis de Puntuaciones", "🤖 Consultor IA LangChain"])
+
+# ------------------------------------------
+# PESTAÑA 1: DASHBOARD VISUAL (GRÁFICO DE ARAÑA)
+# ------------------------------------------
+with tab1:
+    col1, col2 = st.columns(2)
+    col1.metric(label="⭐ Nota Media Booking", value=f"{info_hotel['nota_media_resenas']} / 10")
+    col2.metric(label="📝 Volumen de Reseñas Analizadas", value=len(comentarios_hotel))
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # --- Lógica del Gráfico de Araña con Benchmarking ---
+    categorias_base = ['Personal', 'Confort', 'WiFi', 'Instalaciones', 'Calidad/Precio', 'Limpieza', 'Ubicación']
+    columnas_notas = ['nota_personal', 'nota_confort', 'nota_wifi', 'nota_instalaciones_servicios', 'nota_calidad_precio', 'nota_limpieza', 'nota_ubicacion']
+
+    cat_validas, punt_hotel, med_globales, cat_faltantes = [], [], [], []
+
+    for cat, col in zip(categorias_base, columnas_notas):
+        nota = info_hotel[col]
+        if pd.isna(nota):
+            cat_faltantes.append(cat)
+        else:
+            cat_validas.append(cat)
+            punt_hotel.append(nota)
+            med_globales.append(round(df_info[col].mean(), 1))
+
+    if cat_faltantes:
+        st.warning(f"⚠️ Categorías sin datos: **{', '.join(cat_faltantes)}**")
+
+    if len(cat_validas) >= 3:
+        min_abs = min(min(punt_hotel), min(med_globales))
+        inicio_rango = int(min_abs) if min_abs >= 5 else 0
+
+        fig = go.Figure()
+        # Capa Fondo: Media Sector
+        fig.add_trace(go.Scatterpolar(
+            r=med_globales + [med_globales[0]], theta=cat_validas + [cat_validas[0]],
+            fill='toself', fillcolor='rgba(255, 65, 54, 0.15)',
+            line=dict(color='rgba(255, 65, 54, 0.5)', width=1.5), name='Media del Sector'
+        ))
+        # Capa Frente: Hotel
+        fig.add_trace(go.Scatterpolar(
+            r=punt_hotel + [punt_hotel[0]], theta=cat_validas + [cat_validas[0]],
+            fill='toself', fillcolor='rgba(31, 119, 180, 0.5)',
+            line=dict(color='#1f77b4', width=3), marker=dict(size=8), name=hotel_seleccionado
+        ))
+        fig.update_layout(
+            polar=dict(radialaxis=dict(visible=True, range=[inicio_rango, 10], dtick=0.5)),
+            showlegend=True, margin=dict(l=80, r=80, t=20, b=20)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+# ------------------------------------------
+# PESTAÑA 2: EL AGENTE LANGCHAIN
+# ------------------------------------------
+with tab2:
+    st.subheader(f"🤖 Consultor Estratégico IA: {hotel_seleccionado}")
+
+    # --- HERRAMIENTAS (TOOLS) ---
+    # Envuelven las funciones base para que el agente pueda invocarlas
+    @tool
+    def consultar_metricas_seleccionado():
+        """Consulta las notas numéricas actuales del hotel seleccionado."""
+        return _consultar_metricas()
+
+    @tool
+    def analizar_comentarios_nlp():
+        """Analiza los tópicos positivos y negativos más frecuentes del hotel."""
+        return _analizar_comentarios()
+
+    # --- Pre-visualización de tópicos (llamada directa a la función base) ---
+    top_data = _analizar_comentarios()
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.success(f"✅ **Fortalezas:** {', '.join(top_data['fortalezas'])}")
+    with col_b:
+        st.error(f"❌ **Debilidades:** {', '.join(top_data['debilidades'])}")
+
+    if st.button("🚀 Ejecutar Consultoría"):
+        with st.spinner('El Agente LangChain está razonando...'):
+            clave = os.getenv("OPENROUTER_API_KEY")
+
+            # LISTA DE MODELOS DE RESPALDO (Evita 404 y 429)
+            modelos_prueba = [
+                "nvidia/nemotron-3-super-120b-a12b:free",
+                "meta-llama/llama-3.2-3b-instruct:free",
+                "meta-llama/llama-3-8b-instruct:free",
+                "mistralai/mistral-7b-instruct:free"
+            ]
+
+            exito = False
+            for m in modelos_prueba:
+                try:
+                    llm = ChatOpenAI(
+                        model=m, api_key=clave,
+                        base_url="https://openrouter.ai/api/v1", temperature=0.3
+                    )
+                    tools = [consultar_metricas_seleccionado, analizar_comentarios_nlp]
+                    prompt = ChatPromptTemplate.from_messages([
+                        ("system", f"Eres un Consultor Senior. Analiza el hotel {hotel_seleccionado}."),
+                        ("human", "{input}"),
+                        MessagesPlaceholder(variable_name="agent_scratchpad"),
+                    ])
+                    agent = create_tool_calling_agent(llm, tools, prompt)
+                    executor = AgentExecutor(agent=agent, tools=tools, verbose=True)
+
+                    respuesta = executor.invoke({"input": f"Dime los 2 puntos de mejora más urgentes para {hotel_seleccionado}."})
+
+                    st.markdown("---")
+                    st.markdown(respuesta["output"])
+                    st.caption(f"🧠 Cerebro utilizado: {m}")
+                    exito = True
+                    break
+                except Exception as e:
+                    st.warning(f"Fallo con {m}. Reintentando con el siguiente...")
+                    continue
+
+            if not exito:
+                st.error("Servidores de OpenRouter saturados. Reintenta en 30 segundos.")
