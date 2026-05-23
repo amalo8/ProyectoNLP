@@ -35,7 +35,7 @@ A continuación se detalla el contenido de este repositorio:
 │   ├── ABSA.ipynb              # Análisis de Sentimiento Basado en Aspectos (Zero-Shot)
 │   └── prueba_beto.ipynb       # Pruebas de validación
 ├── preprocesado/               # Scripts de limpieza inicial y consolidación
-│   ├── preprocesado_comentarios.ipynb  # preprocesado dataset comentarios
+│   ├── preprocesado.ipynb      # Preprocesado dataset comentarios
 │   ├── tokenizacion.ipynb      # Tokenización y lematización comentarios
 │   ├── traduccion.ipynb        # Traducción de comentarios
 |   ├── topic_modeling.ipynb    # Extracción de tópicos 
