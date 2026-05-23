@@ -3,6 +3,7 @@
 Trabajo final de la asignatura **Procesado del Lenguaje Natural** del *Máster en Ciencia de Datos* de la *Universitat de València* (Curso 2025/2026).
 
 Este proyecto consiste en el desarrollo de un sistema avanzado de análisis de opiniones para 12 hoteles de la ciudad de Valencia, aplicando técnicas de Procesado del Lenguaje Natural (PLN). A partir de un corpus masivo de **58.720 reseñas** recopiladas mediante *web scraping*, el estudio combina el análisis textual y estadístico para extraer inteligencia de negocio de alto valor estratégico para el sector hotelero.
+
 La idea central del trabajo es superar las limitaciones de las valoraciones numéricas tradicionales, profundizando en el componente emocional del texto libre redactado por los huéspedes. El análisis conjunto de los comentarios y las puntuaciones permite identificar con precisión qué servicios específicos impactan más en la percepción global del cliente, así como diagnosticar problemas operativos concretos descritos en las reseñas para proponer mejoras accionables.
 
 ## ✨ Objetivos del Proyecto
