@@ -18,20 +18,30 @@ La idea central del trabajo es superar las limitaciones de las valoraciones num�
 A continuación se detalla el contenido de este repositorio:
 
 ```text
-├── datos/                              # Datos crudos extraídos y conjuntos procesados
-├── figuras/                            # Gráficos y visualizaciones generadas en el EDA
-├── agente/                             # Código del agente inteligente (LangChain)
-├── 01_preprocesado.ipynb               # Limpieza, normalización y traducción de reseñas
-├── 02_union_datos.ipynb                # Unión de CSVs de los distintos hoteles
-├── 03_analisis_exploratorio.ipynb      # EDA: distribución de notas y análisis de sentimiento
-├── 04_prediccion_satisfaccion.ipynb    # Fine-tuning de BETO para clasificación de reseñas
-├── 05_analisis_nacionalidad.ipynb      # TF-IDF, Log Odds y análisis por nacionalidad
-├── 06_absa_topic_modeling.ipynb        # ABSA Zero-Shot con embeddings multilingües
-├── 07_indices_correlaciones.ipynb      # Índices PLN, Time-Decay y correlaciones de Pearson
-├── 08_agente_inteligente.ipynb         # Agente LangChain: auditoría y monitorización
-├── app.py                              # Aplicación Streamlit del dashboard interactivo
-├── requirements.txt                    # Dependencias necesarias para ejecutar el proyecto
-└── README.md                           # Este archivo
+├── actividades_clase/          # Pruebas y ejercicios previos (Agentes, Topic Modeling)
+├── agente/                     # Código de despliegue del agente inteligente (LangChain)
+│   ├── app.py                  # Aplicación principal del cuadro de mandos (Streamlit)
+│   └── requirements.txt        # Dependencias específicas del agente
+├── datos/                      # Almacenamiento de datos del proyecto
+│   ├── procesados/             # Datasets finales tras limpieza, traducción y modelado
+│   └── scraping_hoteles/       # Datos crudos extraídos de cada hotel original
+├── figuras/                    # Gráficos generados en los análisis 
+├── objetivo1/                  # Scripts del 1º Objetivo
+│   ├── Analisis_exploratorio.ipynb # EDA (Distribución de notas y sentimiento)
+│   └── predictor_nota.ipynb    # Fine-tuning de BETO para predicción de satisfacción
+├── objetivo2/                  # Scripts del 2º Objetivo
+│   └── nacionalidades.ipynb    # Análisis por nacionalidad (TF-IDF, Log Odds)
+├── objetivo3/                  # Scripts del 3º Objetivo
+│   ├── ABSA.ipynb              # Análisis de Sentimiento Basado en Aspectos (Zero-Shot)
+│   └── prueba_beto.ipynb       # Pruebas de validación
+├── preprocesado/               # Scripts de limpieza inicial y consolidación
+│   ├── preprocesado_comentarios.ipynb  # preprocesado dataset comentarios
+│   ├── tokenizacion.ipynb      # Tokenización y lematización comentarios
+│   ├── traduccion.ipynb        # Traducción de comentarios
+|   ├── topic_modeling.ipynb    # Extracción de tópicos 
+│   └── union_csv.ipynb         # Unión de los datos scrapeados
+├── objetivos.txt               # Archivo de brainstorming y objetivos del proyecto
+└── README.md                   # Este archivo
 ```
 
 ## 🚀 Ejecución del agente
