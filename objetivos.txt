@@ -1,0 +1,56 @@
+=============================================================================
+OBJETIVOS DEL PROYECTO NLP
+=============================================================================
+
+-----------------------------------------------------------------------------
+PARTE 1: BRAINSTORMING INICIAL 
+-----------------------------------------------------------------------------
+
+0. Preprocesado
+- Mirar idiomas de reseñas, emojis, usar un modelo para cada reseña o traducir, según la cantidad de reseñas de cada idioma.
+
+1. Análisis de Sentimientos
+- Usar un modelo preentrenado: centrarnos en positivo/negativo/neutro.
+- Utilizar las notas haciendo intervalos para definir positivo, negativo y neutro.
+- Ver si el comentario de cada columna (positivo o negativo) realmente es coherente con la nota general que le da la persona a su estancia.
+- Buscar los apartados de los que hay nota del hotel, filtrar los comentarios que hacen referencia a ese apartado, y hacer un análisis de sentimientos de ahí.
+- Si están los detalles de la habitación, ver la comparativa de la reseña con la calidad de la habitación.
+- Comparar las notas que les dan los extranjeros.
+
+2. Modelado de Temas (Topic Modeling)
+- Extracción de tópicos ocultos: Usar algoritmos (como LDA o BERTopic) para que la IA extraiga automáticamente los 5 o 6 temas principales (Ej: Desayuno, Ruido, Personal).
+- Nubes de palabras (Wordclouds) contextuales: Crear visualizaciones de las palabras más repetidas en reseñas de "10" frente a las de "1 a 3".
+
+3. Modelado Predictivo (Machine Learning)
+- Predicción de la nota (Rating Prediction): Entrenar un modelo de clasificación (ej. Random Forest, SVM) para predecir la nota numérica dándole solo el texto de una reseña nueva.
+- Detector de "Reseñas Falsas" (Outlier Detection): Encontrar reseñas donde la nota es un 10, pero el sentimiento del texto es muy negativo (o viceversa) para detectar usuarios "troll".
+
+4. Insights de Negocio (Business Intelligence)
+- Ranking de puntos críticos: Identificar cuáles son las quejas que más hunden la nota media de un hotel.
+- Perfilado de hoteles: Usar el NLP para definir la "personalidad" de cada hotel según sus reseñas.
+
+
+-----------------------------------------------------------------------------
+PARTE 2: ESTUDIO DE LAS IDEAS INICIALES
+-----------------------------------------------------------------------------
+
+Durante la fase de exploración y modelado, nos dimos cuenta de una limitación importante: nuestro conjunto de datos abarcaba únicamente 12 hoteles. 
+
+Al intentar predecir directamente la nota media global por hotel utilizando Machine Learning, comprendimos que no disponíamos de suficientes observaciones a nivel agregado (solo 12 muestras/hoteles) para que un modelo predictivo generalizara correctamente. 
+
+Esto nos obligó a reformular el enfoque: en lugar de predecir a nivel de hotel, el modelo predictivo debía trabajar a nivel de reseña individual (aprovechando las casi 60.000 observaciones). Posteriormente, esas predicciones individuales se agregarían para estimar la satisfacción del hotel. Esta reestructuración nos llevó a consolidar los objetivos finales.
+
+
+-----------------------------------------------------------------------------
+PARTE 3: OBJETIVOS FINALES DECIDIDOS
+-----------------------------------------------------------------------------
+
+Tras ajustar el alcance técnico y evaluar la viabilidad de los datos, el proyecto se consolidó en los siguientes cuatro objetivos principales:
+
+1. Predicción de la satisfacción del cliente y puntuación del hotel en base a ella (Clasificación mediante fine-tuning de BETO).
+2. Análisis de la exigencia y de los aspectos más relevantes según la nacionalidad de los clientes (Uso de TF-IDF y Log Odds).
+3. Extracción de tópicos y validación estadística del sentimiento (ABSA) aplicados a las 7 categorías oficiales del sector.
+4. Implementación de un Agente Inteligente (LangChain) para la operativización de los hallazgos mediante auditorías competitivas.
+
+=============================================================================
+
